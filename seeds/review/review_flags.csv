@@ -1,0 +1,6 @@
+id,slug,name,description,default_severity,is_active
+1,sensitive_content,Sensitive Content,General runtime handling for sensitive content,medium,true
+2,age_gate,Age Gate,Marks content that carries an explicit age gate,medium,true
+3,worldview_sensitive,Worldview Sensitive,Marks content that needs worldview-aware handling,high,true
+4,human_review_required,Human Review Required,Marks content whose localized wording requires human-reviewed handling,high,true
+5,sensitive_free_text,Sensitive Free Text,Marks guarded runtime flows with reflective free-text input,high,true

@@ -37,12 +37,13 @@ type answerResponse struct {
 }
 
 type submitAnswerResponse struct {
-	Answer            answerResponse   `json:"answer"`
-	Package           *packageResponse `json:"package,omitempty"`
-	ProgressState     string           `json:"progress_state"`
-	AnsweredQuestions int              `json:"answered_questions"`
-	TotalQuestions    int              `json:"total_questions"`
-	HasMore           bool             `json:"has_more"`
+	Answer            answerResponse      `json:"answer"`
+	Package           *packageResponse    `json:"package,omitempty"`
+	Governance        *governanceResponse `json:"governance,omitempty"`
+	ProgressState     string              `json:"progress_state"`
+	AnsweredQuestions int                 `json:"answered_questions"`
+	TotalQuestions    int                 `json:"total_questions"`
+	HasMore           bool                `json:"has_more"`
 }
 
 func newAnswersHandler(service *answers.Service) *answersHandler {
@@ -86,6 +87,7 @@ func (h *answersHandler) create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, submitAnswerResponse{
 		Answer:            makeAnswerResponse(result.Answer),
 		Package:           makePackageResponse(result.Package),
+		Governance:        makeGovernanceResponse(result.Governance),
 		ProgressState:     result.ProgressState,
 		AnsweredQuestions: result.AnsweredQuestions,
 		TotalQuestions:    result.TotalQuestions,

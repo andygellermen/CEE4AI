@@ -7,7 +7,7 @@ import (
 const DefaultPackageSize = 3
 
 type QuestionPlanner interface {
-	BuildPackage(ctx context.Context, domainID int64, offset, limit int) (*QuestionPlan, error)
+	BuildPackage(ctx context.Context, domainID, languageID int64, regionID *int64, offset, limit int) (*QuestionPlan, error)
 }
 
 type Service struct {
@@ -22,7 +22,7 @@ func NewService(repo *Repository, questions QuestionPlanner) *Service {
 	}
 }
 
-func (s *Service) EnsureByQuestionPosition(ctx context.Context, sessionID string, domainID int64, position int) (*SessionPackage, error) {
+func (s *Service) EnsureByQuestionPosition(ctx context.Context, sessionID string, domainID, languageID int64, regionID *int64, position int) (*SessionPackage, error) {
 	if position <= 0 {
 		return nil, nil
 	}
@@ -38,7 +38,7 @@ func (s *Service) EnsureByQuestionPosition(ctx context.Context, sessionID string
 	}
 
 	offset := (packageIndex - 1) * DefaultPackageSize
-	plan, err := s.questions.BuildPackage(ctx, domainID, offset, DefaultPackageSize)
+	plan, err := s.questions.BuildPackage(ctx, domainID, languageID, regionID, offset, DefaultPackageSize)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/andygellermen/CEE4AI/internal/governance"
 	"github.com/andygellermen/CEE4AI/internal/questions"
 	"github.com/andygellermen/CEE4AI/internal/sessions"
 )
@@ -13,11 +14,12 @@ type questionsHandler struct {
 }
 
 type nextQuestionResponse struct {
-	Session            sessionResponse   `json:"session"`
-	Package            *packageResponse  `json:"package,omitempty"`
-	Question           *questionResponse `json:"question,omitempty"`
-	RemainingQuestions int               `json:"remaining_questions"`
-	HasMore            bool              `json:"has_more"`
+	Session            sessionResponse     `json:"session"`
+	Package            *packageResponse    `json:"package,omitempty"`
+	Question           *questionResponse   `json:"question,omitempty"`
+	Governance         *governanceResponse `json:"governance,omitempty"`
+	RemainingQuestions int                 `json:"remaining_questions"`
+	HasMore            bool                `json:"has_more"`
 }
 
 type questionResponse struct {
@@ -73,6 +75,7 @@ func (h *questionsHandler) next(w http.ResponseWriter, r *http.Request) {
 	response := nextQuestionResponse{
 		Session:            makeSessionResponse(result.Session),
 		Package:            makePackageResponse(result.Package),
+		Governance:         makeGovernanceResponse(result.Governance),
 		RemainingQuestions: result.RemainingQuestions,
 		HasMore:            result.HasMore,
 	}
@@ -114,5 +117,23 @@ func makeQuestionResponse(question *questions.DeliveryQuestion) *questionRespons
 		RequiresHumanReview:             question.RequiresHumanReview,
 		WorldviewSensitive:              question.WorldviewSensitive,
 		Options:                         options,
+	}
+}
+
+func makeGovernanceResponse(decision *governance.RuntimeDecision) *governanceResponse {
+	if decision == nil {
+		return nil
+	}
+
+	return &governanceResponse{
+		RulesetSlug:         decision.RulesetSlug,
+		RulesetVersion:      decision.RulesetVersion,
+		DeliveryMode:        decision.DeliveryMode,
+		Severity:            decision.Severity,
+		ReviewRequired:      decision.ReviewRequired,
+		ApprovedForDelivery: decision.ApprovedForDelivery,
+		SensitivityFlags:    decision.SensitivityFlags,
+		AppliedPolicies:     decision.AppliedPolicies,
+		Notes:               decision.Notes,
 	}
 }

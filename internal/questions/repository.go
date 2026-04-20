@@ -59,31 +59,49 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) CountActiveByDomain(ctx context.Context, domainID int64) (int, error) {
+func (r *Repository) CountActiveByDomain(ctx context.Context, domainID, languageID int64, regionID *int64) (int, error) {
 	var count int
 	if err := r.pool.QueryRow(ctx, `
 SELECT COUNT(*)
-FROM content.question_master
-WHERE domain_id = $1
-  AND is_active = TRUE
-  AND review_status = 'active'
-`, domainID).Scan(&count); err != nil {
+FROM content.question_master qm
+WHERE qm.domain_id = $1
+  AND qm.is_active = TRUE
+  AND qm.review_status = 'active'
+  AND EXISTS (
+      SELECT 1
+      FROM content.question_translation qt
+      WHERE qt.question_id = qm.id
+        AND qt.language_id = $2
+        AND qt.is_active = TRUE
+        AND qt.localization_status = 'approved'
+        AND (qt.region_id IS NULL OR qt.region_id IS NOT DISTINCT FROM $3)
+  )
+`, domainID, languageID, regionID).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count active questions: %w", err)
 	}
 
 	return count, nil
 }
 
-func (r *Repository) BuildPackage(ctx context.Context, domainID int64, offset, limit int) (*packages.QuestionPlan, error) {
+func (r *Repository) BuildPackage(ctx context.Context, domainID, languageID int64, regionID *int64, offset, limit int) (*packages.QuestionPlan, error) {
 	rows, err := r.pool.Query(ctx, `
 SELECT id, COALESCE(estimated_time_seconds, 0)
-FROM content.question_master
-WHERE domain_id = $1
-  AND is_active = TRUE
-  AND review_status = 'active'
+FROM content.question_master qm
+WHERE qm.domain_id = $1
+  AND qm.is_active = TRUE
+  AND qm.review_status = 'active'
+  AND EXISTS (
+      SELECT 1
+      FROM content.question_translation qt
+      WHERE qt.question_id = qm.id
+        AND qt.language_id = $2
+        AND qt.is_active = TRUE
+        AND qt.localization_status = 'approved'
+        AND (qt.region_id IS NULL OR qt.region_id IS NOT DISTINCT FROM $3)
+  )
 ORDER BY id
-LIMIT $2 OFFSET $3
-`, domainID, limit, offset)
+LIMIT $4 OFFSET $5
+`, domainID, languageID, regionID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query package questions: %w", err)
 	}
@@ -107,7 +125,7 @@ LIMIT $2 OFFSET $3
 	return plan, nil
 }
 
-func (r *Repository) GetNextUnansweredQuestionID(ctx context.Context, sessionID string, domainID int64) (int64, error) {
+func (r *Repository) GetNextUnansweredQuestionID(ctx context.Context, sessionID string, domainID, languageID int64, regionID *int64) (int64, error) {
 	var questionID int64
 	err := r.pool.QueryRow(ctx, `
 SELECT qm.id
@@ -115,6 +133,15 @@ FROM content.question_master qm
 WHERE qm.domain_id = $2
   AND qm.is_active = TRUE
   AND qm.review_status = 'active'
+  AND EXISTS (
+      SELECT 1
+      FROM content.question_translation qt
+      WHERE qt.question_id = qm.id
+        AND qt.language_id = $3
+        AND qt.is_active = TRUE
+        AND qt.localization_status = 'approved'
+        AND (qt.region_id IS NULL OR qt.region_id IS NOT DISTINCT FROM $4)
+  )
   AND NOT EXISTS (
       SELECT 1
       FROM runtime.answers a
@@ -123,7 +150,7 @@ WHERE qm.domain_id = $2
   )
 ORDER BY qm.id
 LIMIT 1
-`, sessionID, domainID).Scan(&questionID)
+`, sessionID, domainID, languageID, regionID).Scan(&questionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrQuestionNotFound
 	}
@@ -134,7 +161,7 @@ LIMIT 1
 	return questionID, nil
 }
 
-func (r *Repository) GetQuestionPosition(ctx context.Context, domainID, questionID int64) (int, error) {
+func (r *Repository) GetQuestionPosition(ctx context.Context, domainID, languageID, questionID int64, regionID *int64) (int, error) {
 	var position int
 	err := r.pool.QueryRow(ctx, `
 WITH ranked AS (
@@ -145,11 +172,20 @@ WITH ranked AS (
     WHERE domain_id = $1
       AND is_active = TRUE
       AND review_status = 'active'
+      AND EXISTS (
+          SELECT 1
+          FROM content.question_translation qt
+          WHERE qt.question_id = content.question_master.id
+            AND qt.language_id = $2
+            AND qt.is_active = TRUE
+            AND qt.localization_status = 'approved'
+            AND (qt.region_id IS NULL OR qt.region_id IS NOT DISTINCT FROM $4)
+      )
 )
 SELECT position
 FROM ranked
-WHERE id = $2
-`, domainID, questionID).Scan(&position)
+WHERE id = $3
+`, domainID, languageID, questionID, regionID).Scan(&position)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrQuestionNotFound
 	}
@@ -217,6 +253,7 @@ JOIN LATERAL (
     WHERE question_id = qm.id
       AND language_id = $2
       AND is_active = TRUE
+      AND localization_status = 'approved'
       AND (region_id IS NULL OR region_id IS NOT DISTINCT FROM $3)
     ORDER BY
       CASE WHEN region_id IS NOT DISTINCT FROM $3 THEN 0 ELSE 1 END,
@@ -288,6 +325,7 @@ JOIN LATERAL (
     WHERE option_id = qom.id
       AND language_id = $2
       AND is_active = TRUE
+      AND localization_status = 'approved'
       AND (region_id IS NULL OR region_id IS NOT DISTINCT FROM $3)
     ORDER BY CASE WHEN region_id IS NOT DISTINCT FROM $3 THEN 0 ELSE 1 END
     LIMIT 1

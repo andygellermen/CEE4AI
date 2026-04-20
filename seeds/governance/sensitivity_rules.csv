@@ -1,0 +1,5 @@
+id,slug,name,description,policy_payload,is_active
+1,base_sensitive_content,Base Sensitive Content,"{""trigger"":""is_sensitive"",""flag"":""sensitive_content"",""severity"":""medium"",""delivery_mode"":""guarded"",""review_required"":false,""note"":""sensitive content is being delivered in guarded mode""}",true
+2,age_gate_guardrail,Age Gate Guardrail,"{""trigger"":""age_gate"",""flag"":""age_gated"",""severity"":""medium"",""delivery_mode"":""guarded"",""review_required"":true,""note"":""age-gated content requires guarded handling and follow-up""}",true
+3,worldview_guardrail,Worldview Guardrail,"{""trigger"":""worldview_sensitive"",""flag"":""worldview_sensitive"",""severity"":""high"",""delivery_mode"":""guarded"",""review_required"":true,""note"":""worldview-sensitive content requires careful non-dogmatic handling""}",true
+4,human_review_guardrail,Human Review Guardrail,"{""trigger"":""requires_human_review"",""flag"":""human_review_required"",""severity"":""high"",""delivery_mode"":""guarded"",""review_required"":true,""note"":""localized content requires explicit human-reviewed handling""}",true

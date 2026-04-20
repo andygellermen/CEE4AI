@@ -3,11 +3,14 @@ package answers
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/andygellermen/CEE4AI/internal/governance"
 	"github.com/andygellermen/CEE4AI/internal/packages"
 	"github.com/andygellermen/CEE4AI/internal/questions"
+	"github.com/andygellermen/CEE4AI/internal/reviews"
 	"github.com/andygellermen/CEE4AI/internal/scoring"
 	"github.com/andygellermen/CEE4AI/internal/sessions"
 )
@@ -29,6 +32,7 @@ type SubmitAnswerRequest struct {
 type SubmitAnswerResult struct {
 	Answer            *Answer
 	Package           *packages.SessionPackage
+	Governance        *governance.RuntimeDecision
 	ProgressState     string
 	AnsweredQuestions int
 	TotalQuestions    int
@@ -36,11 +40,13 @@ type SubmitAnswerResult struct {
 }
 
 type Service struct {
-	sessionRepo    *sessions.Repository
-	questionRepo   *questions.Repository
-	answerRepo     *Repository
-	packageService *packages.Service
-	scoringService *scoring.Service
+	sessionRepo       *sessions.Repository
+	questionRepo      *questions.Repository
+	answerRepo        *Repository
+	packageService    *packages.Service
+	scoringService    *scoring.Service
+	governanceService *governance.Service
+	reviewService     *reviews.Service
 }
 
 func NewService(
@@ -49,13 +55,17 @@ func NewService(
 	answerRepo *Repository,
 	packageService *packages.Service,
 	scoringService *scoring.Service,
+	governanceService *governance.Service,
+	reviewService *reviews.Service,
 ) *Service {
 	return &Service{
-		sessionRepo:    sessionRepo,
-		questionRepo:   questionRepo,
-		answerRepo:     answerRepo,
-		packageService: packageService,
-		scoringService: scoringService,
+		sessionRepo:       sessionRepo,
+		questionRepo:      questionRepo,
+		answerRepo:        answerRepo,
+		packageService:    packageService,
+		scoringService:    scoringService,
+		governanceService: governanceService,
+		reviewService:     reviewService,
 	}
 }
 
@@ -74,6 +84,28 @@ func (s *Service) Submit(ctx context.Context, req SubmitAnswerRequest) (*SubmitA
 		return nil, ErrQuestionSessionMismatch
 	}
 
+	question, err := s.questionRepo.GetByIDForLocale(ctx, req.QuestionID, session.LocaleLanguageID, session.LocaleRegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	decision, err := s.governanceService.ResolveQuestionDecision(ctx, governance.QuestionPolicyInput{
+		QuestionID:           question.ID,
+		DomainID:             session.DomainID,
+		Mode:                 session.Mode,
+		LocaleRegionID:       session.LocaleRegionID,
+		QuestionFamily:       question.QuestionFamily,
+		IsSensitive:          question.IsSensitive,
+		AgeGate:              question.AgeGate,
+		MeaningDepth:         question.MeaningDepth,
+		WorldviewSensitivity: question.WorldviewSensitivity,
+		RequiresHumanReview:  question.RequiresHumanReview,
+		WorldviewSensitive:   question.WorldviewSensitive,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	exists, err := s.answerRepo.ExistsForSessionQuestion(ctx, req.SessionID, req.QuestionID)
 	if err != nil {
 		return nil, err
@@ -82,12 +114,12 @@ func (s *Service) Submit(ctx context.Context, req SubmitAnswerRequest) (*SubmitA
 		return nil, ErrQuestionAlreadyAnswered
 	}
 
-	position, err := s.questionRepo.GetQuestionPosition(ctx, session.DomainID, req.QuestionID)
+	position, err := s.questionRepo.GetQuestionPosition(ctx, session.DomainID, session.LocaleLanguageID, req.QuestionID, session.LocaleRegionID)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := s.packageService.EnsureByQuestionPosition(ctx, session.ID, session.DomainID, position)
+	pkg, err := s.packageService.EnsureByQuestionPosition(ctx, session.ID, session.DomainID, session.LocaleLanguageID, session.LocaleRegionID, position)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +166,7 @@ func (s *Service) Submit(ctx context.Context, req SubmitAnswerRequest) (*SubmitA
 		return nil, err
 	}
 
-	totalQuestions, err := s.questionRepo.CountActiveByDomain(ctx, session.DomainID)
+	totalQuestions, err := s.questionRepo.CountActiveByDomain(ctx, session.DomainID, session.LocaleLanguageID, session.LocaleRegionID)
 	if err != nil {
 		return nil, err
 	}
@@ -151,9 +183,37 @@ func (s *Service) Submit(ctx context.Context, req SubmitAnswerRequest) (*SubmitA
 		return nil, err
 	}
 
+	if err := s.governanceService.Audit(ctx, governance.CreateAuditLogParams{
+		EntityType: "answer",
+		EntityID:   strconv.FormatInt(answer.ID, 10),
+		Action:     "runtime.answer_submitted",
+		Payload: map[string]any{
+			"session_id":        session.ID,
+			"question_id":       req.QuestionID,
+			"answer_kind":       answer.AnswerKind,
+			"delivery_mode":     decision.DeliveryMode,
+			"severity":          decision.Severity,
+			"sensitivity_flags": decision.SensitivityFlags,
+			"review_required":   decision.ReviewRequired,
+			"progress_state":    progressState,
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := s.reviewService.FlagRuntimeSensitivity(ctx, reviews.RuntimeFlagRequest{
+		QuestionID:      req.QuestionID,
+		SessionID:       session.ID,
+		Decision:        decision,
+		FreeTextPresent: strings.TrimSpace(answer.FreeTextAnswer) != "",
+	}); err != nil {
+		return nil, err
+	}
+
 	return &SubmitAnswerResult{
 		Answer:            answer,
 		Package:           pkg,
+		Governance:        decision,
 		ProgressState:     progressState,
 		AnsweredQuestions: answeredQuestions,
 		TotalQuestions:    totalQuestions,

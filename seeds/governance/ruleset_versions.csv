@@ -1,0 +1,5 @@
+id,domain_id,slug,version,description,effective_from,effective_to,is_active
+1,,runtime.snapshot,2026.04,Global snapshot runtime ruleset,2026-01-01T00:00:00Z,,true
+2,,runtime.guided_progression,2026.04,Global guided progression runtime ruleset,2026-01-01T00:00:00Z,,true
+3,5,runtime.snapshot,2026.04-meaning,Meaning-aware snapshot ruleset for sensitive worldview flows,2026-01-01T00:00:00Z,,true
+4,5,runtime.guided_progression,2026.04-meaning,Meaning-aware guided progression ruleset for sensitive worldview flows,2026-01-01T00:00:00Z,,true

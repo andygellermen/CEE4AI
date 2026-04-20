@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/andygellermen/CEE4AI/internal/governance"
 	"github.com/andygellermen/CEE4AI/internal/packages"
 )
 
@@ -30,14 +31,16 @@ type StartSessionResult struct {
 }
 
 type Service struct {
-	repo           *Repository
-	packageService *packages.Service
+	repo              *Repository
+	packageService    *packages.Service
+	governanceService *governance.Service
 }
 
-func NewService(repo *Repository, packageService *packages.Service) *Service {
+func NewService(repo *Repository, packageService *packages.Service, governanceService *governance.Service) *Service {
 	return &Service{
-		repo:           repo,
-		packageService: packageService,
+		repo:              repo,
+		packageService:    packageService,
+		governanceService: governanceService,
 	}
 }
 
@@ -68,8 +71,22 @@ func (s *Service) Start(ctx context.Context, req StartSessionRequest) (*StartSes
 		return nil, err
 	}
 
-	firstPackage, err := s.packageService.EnsureByQuestionPosition(ctx, session.ID, session.DomainID, 1)
+	firstPackage, err := s.packageService.EnsureByQuestionPosition(ctx, session.ID, session.DomainID, session.LocaleLanguageID, session.LocaleRegionID, 1)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := s.governanceService.Audit(ctx, governance.CreateAuditLogParams{
+		EntityType: "session",
+		EntityID:   session.ID,
+		Action:     "runtime.session_started",
+		Payload: map[string]any{
+			"domain_id":          session.DomainID,
+			"mode":               session.Mode,
+			"locale_language_id": session.LocaleLanguageID,
+			"locale_region_id":   session.LocaleRegionID,
+		},
+	}); err != nil {
 		return nil, err
 	}
 

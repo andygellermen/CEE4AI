@@ -2,12 +2,14 @@ package importer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -144,6 +146,10 @@ func parseValue(column columnType, raw string) (any, error) {
 		return strconv.ParseInt(raw, 10, 64)
 	case "numeric", "real", "double precision":
 		return strconv.ParseFloat(raw, 64)
+	case "timestamp with time zone", "timestamp without time zone":
+		return parseTimestamp(raw)
+	case "json", "jsonb":
+		return parseJSON(raw)
 	default:
 		switch column.UDTName {
 		case "bool":
@@ -152,10 +158,38 @@ func parseValue(column columnType, raw string) (any, error) {
 			return strconv.ParseInt(raw, 10, 64)
 		case "float4", "float8", "numeric":
 			return strconv.ParseFloat(raw, 64)
+		case "json", "jsonb":
+			return parseJSON(raw)
+		case "timestamptz", "timestamp":
+			return parseTimestamp(raw)
 		default:
 			return raw, nil
 		}
 	}
+}
+
+func parseJSON(raw string) (any, error) {
+	var payload json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
+func parseTimestamp(raw string) (any, error) {
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05Z07:00",
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+	for _, layout := range layouts {
+		parsed, err := time.Parse(layout, raw)
+		if err == nil {
+			return parsed, nil
+		}
+	}
+	return nil, fmt.Errorf("unsupported timestamp %q", raw)
 }
 
 func buildUpsertQuery(tableName string, headers, conflictColumns []string) string {

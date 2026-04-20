@@ -2,11 +2,14 @@ package results
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/andygellermen/CEE4AI/internal/answers"
+	"github.com/andygellermen/CEE4AI/internal/governance"
 	"github.com/andygellermen/CEE4AI/internal/packages"
 	"github.com/andygellermen/CEE4AI/internal/questions"
+	"github.com/andygellermen/CEE4AI/internal/reviews"
 	"github.com/andygellermen/CEE4AI/internal/scoring"
 	"github.com/andygellermen/CEE4AI/internal/sessions"
 )
@@ -14,15 +17,16 @@ import (
 const (
 	snapshotResultType   = "snapshot_profile"
 	snapshotProfileDepth = "snapshot"
-	snapshotRuleset      = "v3.snapshot"
 )
 
 type Service struct {
-	sessionRepo    *sessions.Repository
-	answerRepo     *answers.Repository
-	questionRepo   *questions.Repository
-	resultRepo     *Repository
-	scoringService *scoring.Service
+	sessionRepo       *sessions.Repository
+	answerRepo        *answers.Repository
+	questionRepo      *questions.Repository
+	resultRepo        *Repository
+	scoringService    *scoring.Service
+	governanceService *governance.Service
+	reviewRepo        *reviews.Repository
 }
 
 func NewService(
@@ -31,13 +35,17 @@ func NewService(
 	questionRepo *questions.Repository,
 	resultRepo *Repository,
 	scoringService *scoring.Service,
+	governanceService *governance.Service,
+	reviewRepo *reviews.Repository,
 ) *Service {
 	return &Service{
-		sessionRepo:    sessionRepo,
-		answerRepo:     answerRepo,
-		questionRepo:   questionRepo,
-		resultRepo:     resultRepo,
-		scoringService: scoringService,
+		sessionRepo:       sessionRepo,
+		answerRepo:        answerRepo,
+		questionRepo:      questionRepo,
+		resultRepo:        resultRepo,
+		scoringService:    scoringService,
+		governanceService: governanceService,
+		reviewRepo:        reviewRepo,
 	}
 }
 
@@ -47,7 +55,7 @@ func (s *Service) BuildSnapshot(ctx context.Context, sessionID string) (*Snapsho
 		return nil, err
 	}
 
-	totalQuestions, err := s.questionRepo.CountActiveByDomain(ctx, session.DomainID)
+	totalQuestions, err := s.questionRepo.CountActiveByDomain(ctx, session.DomainID, session.LocaleLanguageID, session.LocaleRegionID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +89,16 @@ func (s *Service) BuildSnapshot(ctx context.Context, sessionID string) (*Snapsho
 		return nil, err
 	}
 
+	reviewFlagCount, err := s.reviewRepo.CountForSession(ctx, session.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	governanceSummary, err := s.governanceService.SummarizeSession(ctx, session.ID, session.DomainID, session.Mode, reviewFlagCount)
+	if err != nil {
+		return nil, err
+	}
+
 	payload := &SnapshotPayload{
 		SessionID:         session.ID,
 		DomainID:          session.DomainID,
@@ -93,6 +111,7 @@ func (s *Service) BuildSnapshot(ctx context.Context, sessionID string) (*Snapsho
 		ResultConfidence:  confidence,
 		CertaintyLevel:    certaintyLevel,
 		Vectors:           vectors,
+		Governance:        governanceSummary,
 		TopSignals: map[string]string{
 			"denktype":  scoring.TopSignal(vectors.Denktype),
 			"skill":     scoring.TopSignal(vectors.Skill),
@@ -108,10 +127,28 @@ func (s *Service) BuildSnapshot(ctx context.Context, sessionID string) (*Snapsho
 		snapshotResultType,
 		snapshotProfileDepth,
 		certaintyLevel,
-		snapshotRuleset,
+		governanceSummary.RulesetVersion,
 		payload,
 	)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := s.governanceService.Audit(ctx, governance.CreateAuditLogParams{
+		EntityType: "snapshot",
+		EntityID:   strconv.FormatInt(snapshot.ID, 10),
+		Action:     "runtime.snapshot_generated",
+		Payload: map[string]any{
+			"session_id":         session.ID,
+			"result_type":        snapshot.ResultType,
+			"ruleset_version":    governanceSummary.RulesetVersion,
+			"review_flag_count":  governanceSummary.ReviewFlagCount,
+			"delivery_mode":      governanceSummary.DeliveryMode,
+			"answered_questions": answeredQuestions,
+			"answered_sensitive": governanceSummary.AnsweredSensitiveQuestions,
+			"answered_worldview": governanceSummary.AnsweredWorldviewSensitiveQuestions,
+		},
+	}); err != nil {
 		return nil, err
 	}
 

@@ -1,0 +1,3 @@
+id,slug,name,description,applies_to_domain_id,applies_to_region_id,is_active
+1,global_reviewable_delivery,Global Reviewable Delivery,Every runtime delivery should remain auditierbar and policy-aware,,,true
+2,meaning_worldview_guardrails,Meaning Worldview Guardrails,Meaning and worldview content should remain reflective and non-dogmatic,5,,true
