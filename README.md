@@ -65,6 +65,9 @@ Wesentliche Dateien:
 - [infra/ansible/group_vars/cee4ai_live_mvp.yml](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/group_vars/cee4ai_live_mvp.yml:1)
 - [infra/ansible/templates/docker-compose.live-mvp.yml.j2](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/templates/docker-compose.live-mvp.yml.j2:1)
 - [infra/ansible/templates/cee4ai.env.j2](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/templates/cee4ai.env.j2:1)
+- [infra/ansible/live-smoke-test-runbook.md](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/live-smoke-test-runbook.md:1)
+- [infra/ansible/smoke-test-live-mvp.sh](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/smoke-test-live-mvp.sh:1)
+- [infra/ansible/go-live-checklist-cpe.md](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/go-live-checklist-cpe.md:1)
 
 ### Wichtige MVP-Annahme
 
@@ -78,3 +81,9 @@ Die Defaults sind jetzt auf eure bestehende Linie gehaertet:
 - Traefik-Docker-Netzwerk: `traefik`
 - TLS-Resolver: `letsEncrypt`
 - lokaler Health-Port fuer den Server-Check: `127.0.0.1:18080`
+
+### Smoke Test Schnelllauf
+
+```bash
+BASE_URL=https://cpe.geller.men ./infra/ansible/smoke-test-live-mvp.sh
+```

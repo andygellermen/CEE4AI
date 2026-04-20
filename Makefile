@@ -1,4 +1,6 @@
-.PHONY: run migrate seed tidy test docker-build
+.PHONY: run migrate seed tidy test docker-build smoke-test-live
+
+BASE_URL ?= https://cpe.geller.men
 
 run:
 	go run ./cmd/api
@@ -17,3 +19,6 @@ test:
 
 docker-build:
 	docker build -t cee4ai:local .
+
+smoke-test-live:
+	BASE_URL=$(BASE_URL) ./infra/ansible/smoke-test-live-mvp.sh

@@ -21,6 +21,9 @@ Dieses Verzeichnis enthaelt die erste Infra-Basis fuer das Live-MVP auf einem Se
 - `inventory.example.ini`: einfaches Inventory-Beispiel
 - `templates/docker-compose.live-mvp.yml.j2`: Compose-Template mit Traefik-Labels
 - `templates/cee4ai.env.j2`: Laufzeit-Env fuer App und Postgres
+- `live-smoke-test-runbook.md`: erster End-to-End-Test fuer `cpe.geller.men`
+- `smoke-test-live-mvp.sh`: kleiner Curl-/JQ-Helper fuer den schnellen Lauf
+- `go-live-checklist-cpe.md`: ruhige Checkliste fuer den ersten produktiven Test-Run
 
 ## Erstes Setup
 
@@ -60,3 +63,23 @@ Die CPE-MVP-Basis ist jetzt bewusst an eure bestehende Infra angenaehert:
 - Die API fuehrt standardmaessig Migrationen beim Containerstart aus.
 - Seeds werden nur eingespielt, wenn `cee4ai_run_seed_on_boot: true` gesetzt ist.
 - Danach startet die API auf Port `8080` im Container.
+
+## Smoke Test
+
+Nach dem ersten Rollout ist der naechste Schritt das Runbook unter [live-smoke-test-runbook.md](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/live-smoke-test-runbook.md:1).
+
+Direkter Schnelllauf:
+
+```bash
+BASE_URL=https://cpe.geller.men ./infra/ansible/smoke-test-live-mvp.sh
+```
+
+Mit behaltenen Artefakten:
+
+```bash
+BASE_URL=https://cpe.geller.men KEEP_ARTIFACTS=true ./infra/ansible/smoke-test-live-mvp.sh
+```
+
+## Erster Go-Live
+
+Fuer den allerersten produktiven Test-Run liegt jetzt zusaetzlich die Checkliste unter [go-live-checklist-cpe.md](/Users/andygellermann/Documents/Projects/CEE4AI/infra/ansible/go-live-checklist-cpe.md:1).
