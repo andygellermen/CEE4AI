@@ -1,0 +1,96 @@
+name: {{ cee4ai_stack_name }}
+
+services:
+  api:
+    container_name: {{ cee4ai_api_container_name }}
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    image: {{ cee4ai_stack_name }}:local
+    restart: unless-stopped
+    env_file:
+      - ./cee4ai.env
+    environment:
+      APP_ENV: {{ cee4ai_app_env }}
+      HTTP_ADDR: ":8080"
+      MIGRATIONS_DIR: /app/migrations
+      SEEDS_DIR: /app/seeds
+      RUN_MIGRATIONS_ON_BOOT: "{{ cee4ai_run_migrations_on_boot | ternary('true', 'false') }}"
+      RUN_SEED_ON_BOOT: "{{ cee4ai_run_seed_on_boot | ternary('true', 'false') }}"
+      DB_STARTUP_RETRIES: "{{ cee4ai_db_startup_retries }}"
+      DB_STARTUP_SLEEP_SECONDS: "{{ cee4ai_db_startup_sleep_seconds }}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    ports:
+      - "127.0.0.1:{{ cee4ai_bind_port }}:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network={{ cee4ai_traefik_network }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}.rule=Host(`{{ cee4ai_domain }}`)
+      - traefik.http.routers.{{ cee4ai_stack_name }}.entrypoints={{ cee4ai_traefik_entrypoints }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-web.rule=Host(`{{ cee4ai_domain }}`)
+      - traefik.http.routers.{{ cee4ai_stack_name }}-web.entrypoints=web
+      - traefik.http.routers.{{ cee4ai_stack_name }}-web.middlewares={{ cee4ai_stack_name }}-https
+      - traefik.http.middlewares.{{ cee4ai_stack_name }}-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.{{ cee4ai_stack_name }}-https.redirectscheme.permanent=true
+      - traefik.http.services.{{ cee4ai_stack_name }}.loadbalancer.server.port=8080
+{% if cee4ai_traefik_enable_tls %}
+      - traefik.http.routers.{{ cee4ai_stack_name }}.tls=true
+{% endif %}
+{% if cee4ai_traefik_certresolver | length > 0 %}
+      - traefik.http.routers.{{ cee4ai_stack_name }}.tls.certresolver={{ cee4ai_traefik_certresolver }}
+{% endif %}
+{% if cee4ai_traefik_middlewares | length > 0 %}
+      - traefik.http.routers.{{ cee4ai_stack_name }}.middlewares={{ cee4ai_traefik_middlewares | join(',') }}
+{% endif %}
+{% if cee4ai_domain_aliases | length > 0 %}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.rule={{ cee4ai_domain_aliases | map('regex_replace', '^(.*)$', 'Host(`\\1`)') | join(' || ') }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.entrypoints={{ cee4ai_traefik_entrypoints }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.tls=true
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.tls.certresolver={{ cee4ai_traefik_certresolver }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.middlewares={{ cee4ai_stack_name }}-alias-redirect
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias.service=noop@internal
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias-web.rule={{ cee4ai_domain_aliases | map('regex_replace', '^(.*)$', 'Host(`\\1`)') | join(' || ') }}
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias-web.entrypoints=web
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias-web.middlewares={{ cee4ai_stack_name }}-https,{{ cee4ai_stack_name }}-alias-redirect
+      - traefik.http.routers.{{ cee4ai_stack_name }}-alias-web.service=noop@internal
+      - traefik.http.middlewares.{{ cee4ai_stack_name }}-alias-redirect.redirectregex.regex=^https?://(?:{{ cee4ai_domain_aliases | map('regex_replace', '([.])', '\\\\.') | join('|') }})/(.*)
+      - traefik.http.middlewares.{{ cee4ai_stack_name }}-alias-redirect.redirectregex.replacement=https://{{ cee4ai_domain }}/$${1}
+      - traefik.http.middlewares.{{ cee4ai_stack_name }}-alias-redirect.redirectregex.permanent=true
+{% endif %}
+    networks:
+      - default
+      - traefik
+
+  postgres:
+    container_name: {{ cee4ai_postgres_container_name }}
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./cee4ai.env
+    environment:
+      POSTGRES_DB: {{ cee4ai_postgres_db }}
+      POSTGRES_USER: {{ cee4ai_postgres_user }}
+      POSTGRES_PASSWORD: {{ cee4ai_postgres_password }}
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ cee4ai_postgres_user }} -d {{ cee4ai_postgres_db }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  default:
+    name: {{ cee4ai_stack_name }}-internal
+  traefik:
+    external: true
+    name: {{ cee4ai_traefik_network }}

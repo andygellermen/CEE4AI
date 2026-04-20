@@ -1,4 +1,4 @@
-.PHONY: run migrate seed tidy test
+.PHONY: run migrate seed tidy test docker-build
 
 run:
 	go run ./cmd/api
@@ -14,3 +14,6 @@ tidy:
 
 test:
 	go test ./...
+
+docker-build:
+	docker build -t cee4ai:local .

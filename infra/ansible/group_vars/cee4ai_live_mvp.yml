@@ -1,0 +1,24 @@
+cee4ai_deploy_root: /srv/cpe
+cee4ai_stack_name: cpe-live-mvp
+cee4ai_api_container_name: cpe-api
+cee4ai_postgres_container_name: cpe-postgres
+
+cee4ai_app_env: production
+cee4ai_domain: cpe.geller.men
+cee4ai_domain_aliases: []
+cee4ai_bind_port: 18080
+
+cee4ai_traefik_network: traefik
+cee4ai_traefik_entrypoints: websecure
+cee4ai_traefik_enable_tls: true
+cee4ai_traefik_certresolver: letsEncrypt
+cee4ai_traefik_middlewares: []
+
+cee4ai_postgres_db: cee4ai
+cee4ai_postgres_user: cee4ai
+cee4ai_postgres_password: change-me
+
+cee4ai_run_migrations_on_boot: true
+cee4ai_run_seed_on_boot: false
+cee4ai_db_startup_retries: 20
+cee4ai_db_startup_sleep_seconds: 3

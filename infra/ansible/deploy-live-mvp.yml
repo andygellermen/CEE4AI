@@ -1,0 +1,116 @@
+- name: Deploy CEE4AI live MVP
+  hosts: local
+  become: true
+  vars:
+    cee4ai_local_repo_root: "{{ playbook_dir }}/../.."
+    cee4ai_remote_src_dir: "{{ cee4ai_deploy_root }}/src"
+    cee4ai_remote_compose_dir: "{{ cee4ai_deploy_root }}/compose"
+    cee4ai_remote_data_dir: "{{ cee4ai_deploy_root }}/data/postgres"
+    cee4ai_sync_paths:
+      - cmd
+      - internal
+      - migrations
+      - seeds
+      - docker
+      - Dockerfile
+      - .dockerignore
+      - go.mod
+      - go.sum
+
+  pre_tasks:
+    - name: Validate live MVP variables
+      ansible.builtin.assert:
+        that:
+          - cee4ai_postgres_password != "change-me"
+          - cee4ai_traefik_network | length > 0
+          - cee4ai_traefik_certresolver | length > 0
+          - cee4ai_bind_port | int > 0
+          - cee4ai_bind_port | int < 65536
+        fail_msg: "Please set cee4ai_postgres_password and the Traefik/runtime vars in group_vars before deploying."
+
+    - name: Check Docker CLI availability
+      ansible.builtin.command:
+        argv: ["docker", "--version"]
+      changed_when: false
+
+    - name: Check Docker Compose plugin availability
+      ansible.builtin.command:
+        argv: ["docker", "compose", "version"]
+      changed_when: false
+
+  tasks:
+    - name: Ensure deployment directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ cee4ai_deploy_root }}"
+        - "{{ cee4ai_remote_src_dir }}"
+        - "{{ cee4ai_remote_compose_dir }}"
+        - "{{ cee4ai_remote_data_dir }}"
+
+    - name: Copy application sources needed for image build
+      ansible.builtin.copy:
+        src: "{{ cee4ai_local_repo_root }}/{{ item }}"
+        dest: "{{ cee4ai_remote_src_dir }}/"
+        mode: preserve
+      loop: "{{ cee4ai_sync_paths }}"
+
+    - name: Render runtime env file
+      ansible.builtin.template:
+        src: templates/cee4ai.env.j2
+        dest: "{{ cee4ai_remote_compose_dir }}/cee4ai.env"
+        mode: "0600"
+
+    - name: Render Docker Compose stack
+      ansible.builtin.template:
+        src: templates/docker-compose.live-mvp.yml.j2
+        dest: "{{ cee4ai_remote_compose_dir }}/docker-compose.live-mvp.yml"
+        mode: "0644"
+
+    - name: Check Traefik Docker network
+      ansible.builtin.command:
+        argv: ["docker", "network", "inspect", "{{ cee4ai_traefik_network }}"]
+      register: cee4ai_traefik_network_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create Traefik Docker network when missing
+      ansible.builtin.command:
+        argv: ["docker", "network", "create", "{{ cee4ai_traefik_network }}"]
+      when: cee4ai_traefik_network_check.rc != 0
+
+    - name: Build and start live MVP stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - --env-file
+          - cee4ai.env
+          - -f
+          - docker-compose.live-mvp.yml
+          - up
+          - -d
+          - --build
+      args:
+        chdir: "{{ cee4ai_remote_compose_dir }}"
+      register: cee4ai_compose_up
+      changed_when: true
+
+    - name: Wait for local health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ cee4ai_bind_port }}/healthz"
+        method: GET
+        status_code: 200
+      register: cee4ai_health
+      retries: 20
+      delay: 5
+      until: cee4ai_health.status == 200
+
+    - name: Show stack result
+      ansible.builtin.debug:
+        msg:
+          - "CEE4AI live MVP deployed to {{ inventory_hostname }}"
+          - "Health endpoint reachable on http://127.0.0.1:{{ cee4ai_bind_port }}/healthz"
+          - "Traefik host configured for https://{{ cee4ai_domain }}"
