@@ -1,0 +1,4 @@
+id,slug,name,description,sensitivity_level,is_active
+1,comparative_open,Comparative Open,Open comparative reflection across worldviews,medium,true
+2,secular_existential,Secular Existential,Existential reflection without required transcendence,high,true
+3,theistic_creation,Theistic Creation,Creation-oriented theistic meaning frame,high,true

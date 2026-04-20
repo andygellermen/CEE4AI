@@ -1,0 +1,4 @@
+id,domain_id,slug,name,description,default_sensitivity,cultural_scope,spiritual_relevance,worldview_sensitivity,meaning_pathway_relevance,is_sensitive,is_active
+1,1,artificial_intelligence,Artificial Intelligence,AI systems tools and their implications,medium,universal,medium,medium,medium,false,true
+2,2,psychology,Psychology,Perception motivation reflection and inner patterns,high,culturally_variable,high,medium,medium,true,true
+3,5,spirituality,Spirituality,Meaning transcendence and contemplative reflection,high,highly_variable,very_high,high,high,true,true

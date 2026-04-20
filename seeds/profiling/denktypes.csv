@@ -1,0 +1,4 @@
+id,slug,name,description,development_hint,is_active
+1,analytical_logical,Analytical Logical,Structured analysis and reasoning,Systematically compare signals before deciding,true
+2,systemic_networked,Systemic Networked,Sees relationships between systems,Look for second-order effects and dependencies,true
+3,reflective_conscious,Reflective Conscious,Reflective and self-observing reasoning,Create deliberate pauses for reflection and synthesis,true

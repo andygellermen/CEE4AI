@@ -1,0 +1,5 @@
+question_id,meaning_tag_id,weight,rationale,is_active
+2,1,0.4,Reflection can touch meaning orientation,true
+3,1,1.0,Direct meaning prompt,true
+3,2,0.9,Direct connectedness prompt,true
+3,3,0.8,Invites worldview reflection,true

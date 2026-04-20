@@ -1,0 +1,5 @@
+id,slug,name,description,sensitivity_level,is_active
+1,meaning,Meaning,General orientation toward meaning and significance,medium,true
+2,connectedness,Connectedness,Orientation toward relatedness and belonging,medium,true
+3,worldview_reflection,Worldview Reflection,Reflection on worldview and larger frames,high,true
+4,symbolic_depth,Symbolic Depth,Openness to layered symbolic meaning,high,true

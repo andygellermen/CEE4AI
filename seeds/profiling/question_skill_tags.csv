@@ -1,0 +1,5 @@
+question_id,skill_id,weight,rationale,is_active
+1,1,0.7,Recognizing the concept behind machine learning,true
+1,2,0.3,Requires understanding the wording of options,true
+2,3,1.0,Direct self-reflection signal,true
+3,4,1.0,Meaning and worldview reflection prompt,true

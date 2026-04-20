@@ -1,0 +1,6 @@
+id,slug,name,description,is_active
+1,cognitive_profile,CEE4AI Cognitive Profile,Adaptive cognitive profiling and early fit mapping,true
+2,personality_profile,CEE Personality Profile,Reflective personality and preference profiling,true
+3,coaching_analyzer,CEE Coaching Analyzer,Non-clinical reflection and trigger navigation,true
+4,pathways,CEE Pathways,Development and career-oriented pathway logic,true
+5,meaning_depth,CEE Meaning and Spiritual Depth,Meaning worldview and contemplative reflection,true

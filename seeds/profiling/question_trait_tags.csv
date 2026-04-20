@@ -1,0 +1,4 @@
+question_id,trait_id,weight,rationale,is_active
+2,2,1.0,Direct indicator of reflective depth,true
+2,3,0.5,Reflective self-check can support value alignment,true
+3,4,0.8,Meaning and connectedness prompt relates to connectedness orientation,true

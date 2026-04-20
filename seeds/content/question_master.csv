@@ -1,0 +1,4 @@
+id,external_id,domain_id,question_family,category_id,subcategory_id,parent_question_id,question_type,scoring_mode,intended_use,confidence_tier,estimated_time_seconds,cognitive_load_level,cultural_scope,region_scope,meaning_depth,worldview_sensitivity,symbolic_interpretation_relevance,existential_load_level,is_sensitive,age_gate,review_status,is_active,version
+1,cog-ai-001,1,knowledge,1,1,,single_choice,exact,cognitive_profile,medium,45,low,universal,,low,low,low,low,false,0,active,true,1
+2,pers-ref-001,2,trait,2,2,,scale,weighted,personality_profile,medium,60,medium,culturally_variable,,medium,low,low,medium,true,0,active,true,1
+3,meaning-001,5,reflective,3,3,,reflection,non_scored,meaning_journey,low,90,medium,highly_variable,,high,high,medium,high,true,16,active,true,1

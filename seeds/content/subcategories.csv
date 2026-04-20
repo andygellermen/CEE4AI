@@ -1,0 +1,4 @@
+id,category_id,slug,name,description,is_sensitive,is_active
+1,1,ai_foundations,AI Foundations,Core concepts and applications of AI,false,true
+2,2,reflection_and_awareness,Reflection and Awareness,Self-observation and reflective capacity,false,true
+3,3,meaning_and_connectedness,Meaning and Connectedness,Meaning resonance and connectedness,true,true

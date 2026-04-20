@@ -1,0 +1,4 @@
+question_id,denktype_id,weight,rationale,is_active
+1,1,1.0,Basic AI comprehension maps strongly to analytical reasoning,true
+2,3,0.8,Reflective self-assessment supports reflective thinking,true
+3,3,1.0,Meaning reflection aligns with reflective conscious processing,true

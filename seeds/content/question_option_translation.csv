@@ -1,0 +1,9 @@
+id,option_id,language_id,region_id,option_text,localization_status,is_active
+1,1,1,,Ein System das nur feste Regeln ohne Datenlernen nutzt,approved,true
+2,1,2,,A system that only uses fixed rules without learning from data,approved,true
+3,2,1,,Ein Verfahren bei dem Muster aus Daten gelernt werden,approved,true
+4,2,2,,An approach in which patterns are learned from data,approved,true
+5,3,1,,Eine Methode die ausschliesslich Bilder manuell sortiert,approved,true
+6,3,2,,A method that only sorts images manually,approved,true
+7,4,1,,Ein System das grundsaetzlich keine Vorhersagen treffen kann,approved,true
+8,4,2,,A system that fundamentally cannot make predictions,approved,true

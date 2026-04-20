@@ -1,0 +1,10 @@
+id,slug,name
+1,editor,Editor
+2,reviewer,Reviewer
+3,coach_reviewer,Coach Reviewer
+4,localization_reviewer,Localization Reviewer
+5,certification_admin,Certification Admin
+6,governance_admin,Governance Admin
+7,auditor,Auditor
+8,system_admin,System Admin
+9,meaning_reviewer,Meaning Reviewer

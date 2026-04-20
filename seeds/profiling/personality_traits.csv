@@ -1,0 +1,5 @@
+id,slug,name,description,polarity_model,is_active
+1,openness_orientation,Openness Orientation,Readiness to explore perspectives and possibilities,low_high,true
+2,reflection_depth,Reflection Depth,Depth of self-observation and inner clarification,low_high,true
+3,value_alignment,Value Alignment,Need for alignment between values and action,low_high,true
+4,connectedness_orientation,Connectedness Orientation,Sensitivity for connectedness and belonging,low_high,true
